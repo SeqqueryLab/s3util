@@ -33,13 +33,12 @@ func (s *Service) CreateJson(bucket string, key string, body interface{}) error 
 	if err != nil {
 		return err
 	}
-	reader := bytes.NewReader(b)
 	length := int64(len(b))
 
 	res, err := s.client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket:        &bucket,
 		Key:           &key,
-		Body:          reader,
+		Body:          bytes.NewBuffer(b),
 		ContentLength: &length,
 	}, s3.WithAPIOptions(
 		v4.SwapComputePayloadSHA256ForUnsignedPayloadMiddleware,
