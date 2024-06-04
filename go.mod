@@ -3,7 +3,6 @@ module github.com/utubun/s3util
 go 1.22.2
 
 require (
-	github.com/aws/aws-sdk-go v1.53.16
 	github.com/aws/aws-sdk-go-v2 v1.27.1
 	github.com/aws/aws-sdk-go-v2/config v1.27.17
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.16.22
