@@ -28,7 +28,7 @@ type partUploadResult struct {
 // CreateObject
 // Creates object in bucket with given id
 func (s *Service) CreateJson(bucket string, key string, body interface{}) error {
-	b, err := json.Marshal(body)
+	b, err := json.MarshalIndent(body, "", " ")
 	if err != nil {
 		return err
 	}
