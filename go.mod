@@ -1,4 +1,4 @@
-module github.com/utubun/s3-util
+module github.com/utubun/s3util
 
 go 1.22.2
 
