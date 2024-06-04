@@ -11,6 +11,7 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -32,15 +33,21 @@ func (s *Service) CreateJson(bucket string, key string, body interface{}) error 
 	if err != nil {
 		return err
 	}
-	r := bytes.NewReader(b)
+	reader := bytes.NewReader(b)
+	length := int64(len(b))
 
-	s.client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket: &bucket,
-		Key:    &key,
-		Body:   r,
-	})
+	res, err := s.client.PutObject(context.TODO(), &s3.PutObjectInput{
+		Bucket:        &bucket,
+		Key:           &key,
+		Body:          reader,
+		ContentLength: &length,
+	}, s3.WithAPIOptions(
+		v4.SwapComputePayloadSHA256ForUnsignedPayloadMiddleware,
+	))
 
-	return nil
+	log.Printf("PutObject result %+v", res)
+
+	return err
 }
 
 // DeleteObject
