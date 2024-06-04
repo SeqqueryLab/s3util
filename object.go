@@ -27,7 +27,7 @@ type partUploadResult struct {
 
 // CreateObject
 // Creates object in bucket with given id
-func (s *Service) CreateJson(bucket string, id string, body interface{}) error {
+func (s *Service) CreateJson(bucket string, key string, body interface{}) error {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -35,8 +35,8 @@ func (s *Service) CreateJson(bucket string, id string, body interface{}) error {
 	r := bytes.NewReader(b)
 
 	s.client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(id),
+		Bucket: &bucket,
+		Key:    &key,
 		Body:   r,
 	})
 
@@ -55,9 +55,10 @@ func (s *Service) DeleteObject(bucket, key string) error {
 
 // ListObjects
 // Lists object in bucket
-func (s *Service) ListObjectsBucket(bucket string) ([]types.Object, error) {
+func (s *Service) ListObjectsBucket(bucket, prefix string) ([]types.Object, error) {
 	res, err := s.client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucket),
+		Bucket: &bucket,
+		Prefix: &prefix,
 	})
 	var contents []types.Object
 	if err != nil {
