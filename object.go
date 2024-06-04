@@ -239,6 +239,7 @@ func (s *Service) UploadObjectMultipart(bucket, key string) error {
 // SelectObjectContent (json, csv)
 // Given an SQL query select object content and return it to the user
 func (s *Service) SelectObjectContent(bucket, key, query string) ([]types.Object, error) {
+	// send the request
 	res, err := s.client.SelectObjectContent(context.TODO(), &s3.SelectObjectContentInput{
 		Bucket:         aws.String(bucket),
 		Key:            aws.String(key),
