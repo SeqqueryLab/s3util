@@ -11,7 +11,6 @@ import (
 	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
-	v4 "github.com/aws/aws-sdk-go-v2/aws/signer/v4"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -34,15 +33,15 @@ func (s *Service) CreateJson(bucket string, key string, body interface{}) error 
 		return err
 	}
 	length := int64(len(b))
+	mime := "application/json"
 
 	res, err := s.client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket:        &bucket,
 		Key:           &key,
-		Body:          bytes.NewBuffer(b),
+		Body:          bytes.NewReader(b),
 		ContentLength: &length,
-	}, s3.WithAPIOptions(
-		v4.SwapComputePayloadSHA256ForUnsignedPayloadMiddleware,
-	))
+		ContentType:   &mime,
+	})
 
 	log.Printf("PutObject result %+v", res)
 
