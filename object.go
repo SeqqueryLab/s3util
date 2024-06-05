@@ -28,19 +28,15 @@ type partUploadResult struct {
 // CreateObject
 // Creates object in bucket with given id
 func (s *Service) CreateJson(bucket string, key string, body interface{}) error {
-	b, err := json.MarshalIndent(body, "", " ")
+	b, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
-	length := int64(len(b))
-	mime := "application/json"
 
 	_, err = s.client.PutObject(context.TODO(), &s3.PutObjectInput{
-		Bucket:        &bucket,
-		Key:           &key,
-		Body:          bytes.NewReader(b),
-		ContentLength: &length,
-		ContentType:   &mime,
+		Bucket: &bucket,
+		Key:    &key,
+		Body:   bytes.NewBuffer(b),
 	})
 
 	log.Printf("PutObject result %+v", string(b))
