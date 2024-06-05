@@ -6,13 +6,77 @@ import (
 	"fmt"
 	"log"
 	"path"
+	"regexp"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
+
+type Dir struct {
+	Name     string
+	Size     int64
+	Modified time.Time
+}
+
+func ObjectToDir(o types.Object) *Dir {
+	return &Dir{
+		Name:     path.Base(*o.Key),
+		Size:     *o.Size,
+		Modified: *o.LastModified,
+	}
+}
+
+func (s *Service) ListDir(bucket, source string) ([]Dir, error) {
+	// prepare the prefix
+	prefix := path.Clean(source)
+	prefix = fmt.Sprintf("%s/", prefix)
+
+	res, err := s.client.ListObjectsV2(
+		context.TODO(),
+		&s3.ListObjectsV2Input{
+			Bucket: &bucket,
+			Prefix: &prefix,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	var content []types.Object = res.Contents
+	if len(content) == 0 {
+		return nil, errors.New("directory does not exist")
+	}
+
+	dirs := make(map[string]Dir)
+
+	for _, val := range content {
+		key := strings.TrimPrefix(*val.Key, prefix)
+		key = regexp.MustCompile(`^[^/]+`).FindString(key)
+
+		if key != "" {
+			d1 := ObjectToDir(val)
+			d1.Name = key
+			if d2, ok := dirs[key]; ok {
+				d1.Size += d2.Size
+				if d1.Modified.Before(d2.Modified) {
+					d1.Modified = d2.Modified
+				}
+			}
+
+			dirs[key] = *d1
+		}
+	}
+
+	var result []Dir
+	for _, val := range dirs {
+		result = append(result, val)
+	}
+	return result, nil
+}
 
 func (s *Service) CopyDir(bucket, source, destination string) error {
 	source = path.Clean(source)
