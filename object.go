@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path"
@@ -25,9 +26,9 @@ type partUploadResult struct {
 	err           error
 }
 
-// CreateObject
-// Creates object in bucket with given id
-func (s *Service) CreateJson(bucket string, key string, body interface{}) error {
+// WriteJson
+// Writes JSON object in bucket with given id
+func (s *Service) WriteJson(bucket string, key string, body interface{}) error {
 	b, err := json.Marshal(body)
 	if err != nil {
 		return err
@@ -42,6 +43,34 @@ func (s *Service) CreateJson(bucket string, key string, body interface{}) error 
 	log.Printf("PutObject result %+v", string(b))
 
 	return err
+}
+
+// ReadJson
+// Reads json file from the storage
+func (s *Service) ReadJson(bucket string, key string) ([]byte, error) {
+
+	// Get the object from S3
+	res, err := s.client.GetObject(
+		context.TODO(),
+		&s3.GetObjectInput{
+			Bucket: &bucket,
+			Key:    &key,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// read the response body to tye bytes buffer
+	b, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	// close the response body
+	res.Body.Close()
+
+	return b, nil
 }
 
 // DeleteObject
