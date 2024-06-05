@@ -35,7 +35,7 @@ func (s *Service) CreateJson(bucket string, key string, body interface{}) error 
 	length := int64(len(b))
 	mime := "application/json"
 
-	res, err := s.client.PutObject(context.TODO(), &s3.PutObjectInput{
+	_, err = s.client.PutObject(context.TODO(), &s3.PutObjectInput{
 		Bucket:        &bucket,
 		Key:           &key,
 		Body:          bytes.NewReader(b),
@@ -43,7 +43,7 @@ func (s *Service) CreateJson(bucket string, key string, body interface{}) error 
 		ContentType:   &mime,
 	})
 
-	log.Printf("PutObject result %+v", res)
+	log.Printf("PutObject result %+v", string(b))
 
 	return err
 }
