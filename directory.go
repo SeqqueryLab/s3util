@@ -31,6 +31,13 @@ func ObjectToDir(o types.Object) *Dir {
 }
 
 func (s *Service) ListDir(bucket, source string) ([]Dir, error) {
+	// Waitgroup and channel
+	var wg sync.WaitGroup
+	ch := make(chan Dir)
+
+	// Map to track dirs
+	dirs := make(map[string]Dir)
+
 	// prepare the prefix
 	prefix := path.Clean(source)
 	prefix = fmt.Sprintf("%s/", prefix)
@@ -48,27 +55,40 @@ func (s *Service) ListDir(bucket, source string) ([]Dir, error) {
 
 	var content []types.Object = res.Contents
 	if len(content) == 0 {
-		return nil, errors.New("directory does not exist")
+		return nil, fmt.Errorf("directory %s does not exist", source)
 	}
 
-	dirs := make(map[string]Dir)
+	if len(content) == 1 && (content[0].Key == &source) {
+		return nil, fmt.Errorf("%s is not a directory", source)
+	}
 
 	for _, val := range content {
-		key := strings.TrimPrefix(*val.Key, prefix)
-		key = regexp.MustCompile(`^[^/]+`).FindString(key)
+		wg.Add(1)
+		go func(val types.Object, prefix string) {
+			log.Printf("Go routine received object: %s\n", *val.Key)
+			defer wg.Done()
+			key := strings.TrimPrefix(*val.Key, prefix)
+			key = regexp.MustCompile(`^[^/]+`).FindString(key)
+			d := ObjectToDir(val)
+			d.Name = key
+			ch <- *d
+		}(val, prefix)
+	}
 
-		if key != "" {
-			d1 := ObjectToDir(val)
-			d1.Name = key
-			if d2, ok := dirs[key]; ok {
-				d1.Size += d2.Size
-				if d1.Modified.Before(d2.Modified) {
-					d1.Modified = d2.Modified
-				}
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for d := range ch {
+		if v, ok := dirs[d.Name]; ok {
+			d.Size += v.Size
+			if d.Modified.After(v.Modified) {
+				d.Modified = v.Modified
 			}
-
-			dirs[key] = *d1
+			dirs[d.Name] = d
 		}
+		dirs[d.Name] = d
 	}
 
 	var result []Dir

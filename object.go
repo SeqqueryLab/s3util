@@ -272,17 +272,15 @@ func (s *Service) UploadObjectMultipart(bucket, key string) error {
 func (s *Service) SelectObjectContent(bucket, key, query string) ([]types.Object, error) {
 	// send the request
 	res, err := s.client.SelectObjectContent(context.TODO(), &s3.SelectObjectContentInput{
-		Bucket:         aws.String(bucket),
-		Key:            aws.String(key),
+		Bucket:         &bucket,
+		Key:            &key,
 		ExpressionType: types.ExpressionTypeSql,
-		Expression:     aws.String("SELECT name FROM S3Object WHERE cast(age as int) > 35"),
+		Expression:     &query,
 		InputSerialization: &types.InputSerialization{
-			CSV: &types.CSVInput{
-				FileHeaderInfo: types.FileHeaderInfoUse,
-			},
+			JSON: &types.JSONInput{},
 		},
 		OutputSerialization: &types.OutputSerialization{
-			CSV: &types.CSVOutput{},
+			JSON: &types.JSONOutput{},
 		},
 	})
 	if err != nil {
