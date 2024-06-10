@@ -1,18 +1,19 @@
-module github.com/utubun/s3util
+module github.com/SeqqueryLab/s3util
 
 go 1.22.2
 
 require (
 	github.com/aws/aws-sdk-go-v2 v1.27.1
 	github.com/aws/aws-sdk-go-v2/config v1.27.17
+	github.com/aws/aws-sdk-go-v2/credentials v1.17.17
 	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.16.22
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.54.4
 	github.com/aws/smithy-go v1.20.2
+	github.com/rs/xid v1.5.0
 )
 
 require (
 	github.com/aws/aws-sdk-go-v2/aws/protocol/eventstream v1.6.2 // indirect
-	github.com/aws/aws-sdk-go-v2/credentials v1.17.17 // indirect
 	github.com/aws/aws-sdk-go-v2/feature/ec2/imds v1.16.4 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/configsources v1.3.8 // indirect
 	github.com/aws/aws-sdk-go-v2/internal/endpoints/v2 v2.6.8 // indirect
