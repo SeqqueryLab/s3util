@@ -98,6 +98,8 @@ func (s *Service) ListDir(bucket, source string) ([]Dir, error) {
 	return result, nil
 }
 
+// CopyDir
+// Copy the content of the source directory to the destination directory
 func (s *Service) CopyDir(bucket, source, destination string) error {
 	source = path.Clean(source)
 	destination = path.Clean(destination)
@@ -145,7 +147,7 @@ func (s *Service) CopyDir(bucket, source, destination string) error {
 }
 
 // MoveDir
-// Moves directory with it content to the new location
+// Moves the source directory with it content to the destination directory
 func (s *Service) MoveDir(bucket, source, destination string) error {
 	source = path.Clean(source)
 	destination = path.Clean(destination)
@@ -202,39 +204,33 @@ func (s *Service) MoveDir(bucket, source, destination string) error {
 // DeleteDir
 // Deletes the directory with all it's content
 func (s *Service) DeleteDir(bucket, source string) error {
-	source = path.Clean(source)
-	res, err := s.client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
-		Bucket: aws.String(bucket),
-		Prefix: aws.String(source),
-	})
+	// Waitgroup and channel
+	var wg sync.WaitGroup
+	ch := make(chan error)
+
+	res, err := s.ListObjectDir(bucket, source)
 	if err != nil {
 		return err
 	}
 
-	var content []types.Object = res.Contents
-	if len(content) == 0 {
-		return errors.New("directory does not exist")
-	}
-
-	var wg sync.WaitGroup
-
-	for _, val := range content {
+	for _, v := range res {
 		wg.Add(1)
-		key := *val.Key
-		log.Printf("Deleting the object %s\n", key)
-
-		// DOES NOt WORK PROPERLY, ADD BLOCKING
-		go func(bucket, key string) {
+		go func(o types.Object) {
 			defer wg.Done()
-			err = s.DeleteObject(bucket, key)
-			if err != nil {
-				// error is not catch in this funcction
-				return
-			}
-
-		}(bucket, key)
+			ch <- s.DeleteObject(bucket, *v.Key)
+		}(v)
 	}
-	wg.Wait()
 
-	return err
+	go func() {
+		wg.Wait()
+		close(ch)
+	}()
+
+	for err = range ch {
+		if err != nil {
+			return fmt.Errorf("failed to delete the object: %s", err)
+		}
+	}
+
+	return nil
 }

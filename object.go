@@ -86,18 +86,38 @@ func (s *Service) DeleteObject(bucket, key string) error {
 // ListObjects
 // Lists object in bucket
 func (s *Service) ListObjectsBucket(bucket, prefix string) ([]types.Object, error) {
+	var contents []types.Object
 	res, err := s.client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
 		Bucket: &bucket,
 		Prefix: &prefix,
 	})
-	var contents []types.Object
 	if err != nil {
 		return nil, err
-	} else {
-		contents = res.Contents
 	}
+	contents = res.Contents
 
 	return contents, err
+}
+
+func (s *Service) ListObjectDir(bucket, source string) ([]types.Object, error) {
+	// prepare the prefix
+	prefix := path.Clean(source)
+	prefix = fmt.Sprintf("%s/", prefix)
+
+	// list objects
+	res, err := s.client.ListObjectsV2(context.TODO(), &s3.ListObjectsV2Input{
+		Bucket: &bucket,
+		Prefix: &prefix,
+	})
+	if err != nil {
+		return nil, err
+	}
+	contents := res.Contents
+	if len(contents) == 0 {
+		return nil, fmt.Errorf("directory %s does not exist", source)
+	}
+
+	return contents, nil
 }
 
 // CopyObjectFolder
