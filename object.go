@@ -73,7 +73,7 @@ func (s *Service) ReadJson(bucket string, key string) ([]byte, error) {
 
 // GetObject
 // Reads object from S3 storage with provided bucket, and key
-func (s *Service) GetObject(bucket, key string) ([]byte, error) {
+func (s *Service) GetObject(bucket, key string) (io.Reader, error) {
 	res, err := s.client.GetObject(
 		context.TODO(),
 		&s3.GetObjectInput{
@@ -84,12 +84,9 @@ func (s *Service) GetObject(bucket, key string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return nil, err
-	}
-	return body, err
+	reader := res.Body
+
+	return reader, err
 }
 
 // DeleteObject
