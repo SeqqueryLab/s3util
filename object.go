@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"os"
 	"path"
-	"sync"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
@@ -73,6 +71,27 @@ func (s *Service) ReadJson(bucket string, key string) ([]byte, error) {
 	return b, nil
 }
 
+// GetObject
+// Reads object from S3 storage with provided bucket, and key
+func (s *Service) GetObject(bucket, key string) ([]byte, error) {
+	res, err := s.client.GetObject(
+		context.TODO(),
+		&s3.GetObjectInput{
+			Bucket: &bucket,
+			Key:    &key,
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, err
+	}
+	return body, err
+}
+
 // DeleteObject
 // Deletes objects in the current bucket
 func (s *Service) DeleteObject(bucket, key string) error {
@@ -99,6 +118,8 @@ func (s *Service) ListObjectsBucket(bucket, prefix string) ([]types.Object, erro
 	return contents, err
 }
 
+// ListObjectDir
+// Lists objects in source directory
 func (s *Service) ListObjectDir(bucket, source string) ([]types.Object, error) {
 	// prepare the prefix
 	prefix := path.Clean(source)
@@ -146,168 +167,18 @@ func (s *Service) MoveObjectToFolder(bucket, key, folder string) error {
 
 // UploadObjecct
 // UploadObject to the bucket
-func (s *Service) UploadObject(bucket, key string, data []byte) error {
-	buff := bytes.NewReader(data)
-	var parMib int64
-
+func (s *Service) UploadObject(bucket, key string, r io.Reader, partMiB int64) error {
+	// Clean key
+	key = path.Clean(key)
+	// Prepare uploader
 	uploader := manager.NewUploader(s.client, func(u *manager.Uploader) {
-		u.PartSize = parMib * 1024 * 1024
+		u.PartSize = partMiB * 1024 * 1024
 	})
-
+	// Fail on error
 	_, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Body:   buff,
-	})
-	return err
-}
-
-// uploadPart
-func (s *Service) uploadPart(fileBytes []byte, bucket, key, uploadId string, n int32, ch chan *partUploadResult, wg *sync.WaitGroup) {
-	defer wg.Done()
-	log.Printf("Uploading part %d, size %d ", n, len(fileBytes))
-
-	uploadRes, err := s.client.UploadPart(context.TODO(), &s3.UploadPartInput{
-		Body:          bytes.NewReader(fileBytes),
-		Bucket:        &bucket,
-		Key:           &key,
-		PartNumber:    &n,
-		UploadId:      &uploadId,
-		ContentLength: aws.Int64(int64(len(fileBytes))),
-	})
-	if err != nil {
-		log.Printf("Error uploading data: %s", err)
-		ch <- &partUploadResult{
-			nil,
-			err,
-		}
-		return
-	} else {
-		ch <- &partUploadResult{
-			&s3.UploadPartOutput{
-				ETag: uploadRes.ETag,
-			},
-			nil,
-		}
-	}
-}
-
-// Multipart upload
-// Multipart upload to s3
-func (s *Service) UploadObjectMultipart(bucket, key string) error {
-	var (
-		wg                            sync.WaitGroup
-		completed, current, remaining int
-		n                             int32 = 1
-	)
-
-	ch := make(chan *partUploadResult, 5)
-
-	file, _ := os.Open("example.fastq.gz")
-	defer file.Close()
-
-	stat, _ := file.Stat()
-	log.Printf("Read the file. Size: %d\n B", stat.Size())
-	remaining = int(stat.Size())
-
-	buff := make([]byte, stat.Size())
-	_, _ = file.Read(buff)
-
-	id, err := s.client.CreateMultipartUpload(context.TODO(), &s3.CreateMultipartUploadInput{
 		Bucket: &bucket,
 		Key:    &key,
+		Body:   r,
 	})
-	if err != nil {
-		return err
-	}
-
-	uploaded := func() (int, error) {
-		res, err := s.client.ListParts(context.TODO(), &s3.ListPartsInput{
-			Bucket:   &bucket,
-			Key:      &key,
-			UploadId: id.UploadId,
-		})
-		if err != nil {
-			return 0, err
-		}
-
-		parts := res.Parts
-		var size int
-		for _, part := range parts {
-			size += int(*part.Size)
-		}
-		fmt.Printf("Uploaded: %v", res)
-		return size, err
-	}
-
-	for start := 0; remaining > 0; start += PartSize {
-		log.Printf("Uploading part %d, remaining %d\n", n, remaining)
-		wg.Add(1)
-		if remaining < PartSize {
-			current = remaining
-		} else {
-			current = PartSize
-		}
-		go s.uploadPart(buff[start:current+start], bucket, key, *id.UploadId, n, ch, &wg)
-		remaining = -current
-		n++
-	}
-
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-
-	for res := range ch {
-		if res.err != nil {
-			// abort
-			_, err := s.client.AbortMultipartUpload(context.TODO(), &s3.AbortMultipartUploadInput{
-				Bucket:   &bucket,
-				Key:      &key,
-				UploadId: id.UploadId,
-			})
-			if err != nil {
-				log.Fatal(err)
-			}
-		} else {
-			temp, err := uploaded()
-			if err != nil {
-				log.Fatal(err)
-			}
-			completed += temp
-		}
-		fmt.Printf("Uploaded: %d B (%d %%)\n", completed, completed/int(stat.Size())*100)
-	}
-
-	s.client.CompleteMultipartUpload(context.TODO(), &s3.CompleteMultipartUploadInput{
-		Bucket:   &bucket,
-		Key:      &key,
-		UploadId: id.UploadId,
-	})
-	return nil
-}
-
-// SelectObjectContent (json, csv)
-// Given an SQL query select object content and return it to the user
-func (s *Service) SelectObjectContent(bucket, key, query string) ([]types.Object, error) {
-	// send the request
-	res, err := s.client.SelectObjectContent(context.TODO(), &s3.SelectObjectContentInput{
-		Bucket:         &bucket,
-		Key:            &key,
-		ExpressionType: types.ExpressionTypeSql,
-		Expression:     &query,
-		InputSerialization: &types.InputSerialization{
-			JSON: &types.JSONInput{},
-		},
-		OutputSerialization: &types.OutputSerialization{
-			JSON: &types.JSONOutput{},
-		},
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	log.Printf("%+v", res)
-
-	return nil, err
+	return err
 }
