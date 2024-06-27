@@ -11,7 +11,7 @@ import (
 )
 
 // ListBucket function lists all the buckets associated with the account
-func (s *Service) ListBucket() ([]types.Bucket, error) {
+func (s *Service) GetBuckets() ([]types.Bucket, error) {
 	var buckets []types.Bucket
 
 	res, err := s.client.ListBuckets(context.TODO(), &s3.ListBucketsInput{})
