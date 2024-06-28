@@ -1,6 +1,8 @@
 package client
 
 import (
+	"io"
+
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 
 	"github.com/SeqqueryLab/s3util/internal/application/core/domain"
@@ -12,6 +14,8 @@ type ClientPort interface {
 	DirDelete(bucket, source string) error
 	JsonWrite(bucket, key string, body interface{}) error
 	JsonRead(bucket, key string) ([]byte, error)
+	ObjectGet(bucket, key string) (io.Reader, error)
+	ObjectUpload(bucket, key string, body io.Reader, partMiB int64) error
 	ObjectDelete(bucket, key string) error
 	GetObjectTags(bucket, key string) (map[string]string, error)
 	PutObjectTags(bucket, key string, tags map[string]string) error

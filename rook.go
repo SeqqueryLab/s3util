@@ -10,6 +10,8 @@
 package s3util
 
 import (
+	"io"
+
 	"github.com/SeqqueryLab/s3util/internal/application/core/api"
 	"github.com/SeqqueryLab/s3util/internal/application/core/domain"
 	"github.com/aws/aws-sdk-go-v2/service/s3/types"
@@ -20,6 +22,10 @@ type Rook interface {
 	GetBuckets() ([]domain.Bucket, error)
 	DirListObjects(bucket, source string) ([]types.Object, error)
 	DirDelete(bucket, source string) error
+	JsonRead(bucket, key string) ([]byte, error)
+	JsonWrite(bucket, key string, body interface{}) error
+	ObjectGet(bucket, key string) (io.Reader, error)
+	ObjectUpload(bucket, key string, body io.Reader, partMiB int64) error
 	ObjectDelete(bucket, key string) error
 	GetObjectTags(bucket, key string) (map[string]string, error)
 	PutObjectTags(bucket, key string, tags map[string]string) error

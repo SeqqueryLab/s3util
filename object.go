@@ -43,7 +43,7 @@ func (s *Service) WriteJson(bucket string, key string, body interface{}) error {
 	return err
 }
 
-// ReadJson
+// ReadJson DONE
 // Reads json file from the storage
 func (s *Service) ReadJson(bucket string, key string) ([]byte, error) {
 
@@ -89,7 +89,7 @@ func (s *Service) GetObject(bucket, key string) (io.Reader, error) {
 	return reader, err
 }
 
-// DeleteObject
+// DeleteObject DONE
 // Deletes objects in the current bucket
 func (s *Service) DeleteObject(bucket, key string) error {
 	_, err := s.client.DeleteObject(context.TODO(), &s3.DeleteObjectInput{
@@ -162,7 +162,7 @@ func (s *Service) MoveObjectToFolder(bucket, key, folder string) error {
 	return err
 }
 
-// UploadObjecct
+// UploadObjecct DONE
 // UploadObject to the bucket
 func (s *Service) UploadObject(bucket, key string, r io.Reader, partMiB int64) error {
 	// Clean key
