@@ -71,8 +71,7 @@ func (s *Service) ReadJson(bucket string, key string) ([]byte, error) {
 	return b, nil
 }
 
-// GetObject
-// Reads object from S3 storage with provided bucket, and key
+// DONE
 func (s *Service) GetObject(bucket, key string) (io.Reader, error) {
 	res, err := s.client.GetObject(
 		context.TODO(),
