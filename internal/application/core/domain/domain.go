@@ -22,6 +22,14 @@ func S3BucketToBucket(b *types.Bucket) *Bucket {
 	}
 }
 
+// Directory
+type Directory struct {
+	Key      string    `json:"key"`
+	Name     string    `json:"name"`
+	Size     int64     `json:"size"`
+	Modified time.Time `json:"modified"`
+}
+
 // Object an object on S3 store
 type Object struct {
 	Name     string            `json:"name"`

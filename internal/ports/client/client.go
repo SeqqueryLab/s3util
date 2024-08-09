@@ -10,8 +10,11 @@ import (
 
 type ClientPort interface {
 	GetBuckets() ([]domain.Bucket, error)
+	BucketExists(id string) (bool, error)
+	CreateBucket(id string) error
+	DeleteBucket(id string) error
 	DirListObjects(bucket, source string) ([]types.Object, error)
-	DirDelete(bucket, source string) error
+	DirDelete(string, string) (*domain.Directory, error)
 	JsonWrite(bucket, key string, body interface{}) error
 	JsonRead(bucket, key string) ([]byte, error)
 	ObjectGet(bucket, key string) (io.Reader, error)

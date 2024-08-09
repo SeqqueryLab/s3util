@@ -20,7 +20,7 @@ func (a *Adapter) DirListObjects(bucket, source string) ([]types.Object, error) 
 		Prefix: &prefix,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("directory does not exist: %s", err)
 	}
 	// Get the contents, and check if it is not empty
 	contents := res.Contents

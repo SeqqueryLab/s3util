@@ -20,8 +20,11 @@ import (
 // Rook interface
 type Rook interface {
 	GetBuckets() ([]domain.Bucket, error)
+	BucketExists(id string) (bool, error)
+	CreateBucket(id string) error
+	DeleteBucket(id string) error
 	DirListObjects(bucket, source string) ([]types.Object, error)
-	DirDelete(bucket, source string) error
+	DirDelete(string, string) (*domain.Directory, error)
 	JsonRead(bucket, key string) ([]byte, error)
 	JsonWrite(bucket, key string, body interface{}) error
 	ObjectGet(bucket, key string) (io.Reader, error)
