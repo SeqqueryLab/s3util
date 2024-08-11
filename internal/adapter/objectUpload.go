@@ -1,7 +1,9 @@
 package adapter
 
 import (
+	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"path"
 
@@ -17,11 +19,17 @@ func (a *Adapter) ObjectUpload(bucket, key string, r io.Reader, partMiB int64) e
 	uploader := manager.NewUploader(a.client, func(u *manager.Uploader) {
 		u.PartSize = partMiB * 1024 * 1024
 	})
+	// read data to the buffer
+	buff, err := io.ReadAll(r)
+	if err != nil {
+		return fmt.Errorf("can not read file: %s", err)
+	}
+	body := bytes.NewReader(buff)
 	// Fail on error
-	_, err := uploader.Upload(context.TODO(), &s3.PutObjectInput{
+	_, err = uploader.Upload(context.TODO(), &s3.PutObjectInput{
 		Bucket: &bucket,
 		Key:    &key,
-		Body:   r,
+		Body:   body,
 	})
 	return err
 }

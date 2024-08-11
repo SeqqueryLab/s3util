@@ -13,6 +13,7 @@ type ClientPort interface {
 	BucketExists(id string) (bool, error)
 	CreateBucket(id string) error
 	DeleteBucket(id string) error
+	DirExists(bucket, source string) (bool, error)
 	DirListObjects(bucket, source string) ([]types.Object, error)
 	DirDelete(string, string) (*domain.Directory, error)
 	JsonWrite(bucket, key string, body interface{}) error
