@@ -5,14 +5,12 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"sync"
+	"log"
+	"path"
+	"strings"
 )
 
 func (a *Adapter) DirGet(bucket, source string) (io.Reader, error) {
-	// define wait group
-	var wg sync.WaitGroup
-	// define error channel
-	ch := make(chan error)
 	// return error if bucket does not exist
 	_, err := a.BucketExists(bucket)
 	if err != nil {
@@ -38,49 +36,36 @@ func (a *Adapter) DirGet(bucket, source string) (io.Reader, error) {
 	w := zip.NewWriter(buf)
 	// iterate over the objects and write them to the buffer
 	for _, item := range res {
-		wg.Add(1)
-		go func(bucket, key string) {
-			defer wg.Done()
-			obj, err := a.ObjectGet(bucket, key)
-			if err != nil {
-				ch <- err
-				return
-			}
-			f, err := w.Create(key)
-			if err != nil {
-				ch <- err
-				return
-			}
-			body, err := io.ReadAll(obj)
-			if err != nil {
-				ch <- err
-				return
-			}
-			_, err = f.Write(body)
-			if err != nil {
-				ch <- err
-				return
-			}
-
-		}(bucket, *item.Key)
-	}
-
-	// wat goroutins to complete
-	go func() {
-		wg.Wait()
-		close(ch)
-	}()
-
-	// check for errors, return if any
-	for err := range ch {
+		// get the object key
+		key := *item.Key
+		// get object from the store
+		obj, err := a.ObjectGet(bucket, key)
 		if err != nil {
-			_ = w.Close()
-			return nil, fmt.Errorf("failed to compress directory %s: %w", source, err)
+			return nil, err
+		}
+		// remove leading prefix for the directory
+		prefix := fmt.Sprintf("%s/", path.Dir(source))
+		fname, _ := strings.CutPrefix(key, prefix)
+		// create a file with fname in the zip archive
+		f, err := w.Create(fname)
+		if err != nil {
+			return nil, err
+		}
+		// get the body of the object
+		body, err := io.ReadAll(obj)
+		if err != nil {
+			return nil, err
+		}
+		// write the body to the zip archive
+		_, err = f.Write(body)
+		if err != nil {
+			return nil, err
 		}
 	}
 
 	// check for errors before closing the writer
 	if err := w.Close(); err != nil {
+		log.Printf("failed to close writer: %s", err)
 		return nil, fmt.Errorf("failed to compress directory %s: %w", source, err)
 	}
 
