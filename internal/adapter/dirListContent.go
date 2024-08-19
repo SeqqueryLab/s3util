@@ -22,11 +22,8 @@ func (a *Adapter) DirListObjects(bucket, source string) ([]types.Object, error) 
 	if err != nil {
 		return nil, fmt.Errorf("directory does not exist: %s", err)
 	}
-	// Get the contents, and check if it is not empty
+	// Get the contents of the directory
 	contents := res.Contents
-	if len(contents) == 0 {
-		return nil, fmt.Errorf("directory %s does not exist", source)
-	}
 
 	return contents, nil
 }
